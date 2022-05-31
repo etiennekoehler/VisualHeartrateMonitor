@@ -10,6 +10,7 @@ from filters import *
 
 # %% User Settings
 use_prerecorded = False
+advanced_skin_extraction = False # advanced holistic skin extraction - not usable in real time
 fs = 30  # Sampling Frequency
 
 # %% Parameters
@@ -27,12 +28,11 @@ found_face = False
 initialized_tracker = False
 face_box = []
 mean_colors = []
-mean_colors_new = []
 timestamps = []
 
 mean_colors_resampled = np.zeros((3, 1))
 
-def get_mean_RGB(frame):
+def get_mean_RGB_holistic(frame):
 
     sig_processing = SignalProcessing()
 
@@ -80,8 +80,10 @@ while True:
     if found_face:
         face = utils_realtime.crop_to_boundingbox(face_box, frame)
         if face.shape[0] > 0 and face.shape[1] > 0:
-            mean_colors += [face.mean(axis=0).mean(axis=0)] # 3-item-list with mean RGB values of current frame is added to mean_colors
-            mean_colors_new += [get_mean_RGB(frame)[0]]
+            if advanced_skin_extraction:
+                mean_colors += [get_mean_RGB_holistic(frame)[0]]
+            else:
+                mean_colors += [face.mean(axis=0).mean(axis=0)] # 3-item-list with mean RGB values of current frame is added to mean_colors
             timestamps += [time.time()] # time that frame was recorded in seconds
             utils_realtime.draw_face_roi(face_box, frame)
             t = np.arange(timestamps[0], timestamps[-1], 1 / fs) # get evenly spaced list of times, with length: num of frames
