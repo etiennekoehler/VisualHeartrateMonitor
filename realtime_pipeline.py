@@ -12,6 +12,7 @@ from filters import *
 use_prerecorded = False
 advanced_skin_extraction = False # advanced holistic skin extraction - not usable in real time
 fs = 30  # Sampling Frequency
+use_POS = False
 
 # %% Parameters
 
@@ -96,30 +97,37 @@ while True:
     # Perform chrominance method
     if mean_colors_resampled.shape[1] > window:
 
-        col_c = np.zeros((3, window))
+        if use_POS:
 
-        for col in [B, G, R]:
-            col_stride = mean_colors_resampled[col, -window:]  # select last samples
-            y_ACDC = signal.detrend(col_stride / np.mean(col_stride))
-            col_c[col] = y_ACDC * skin_vec[col]
+            bpm = frequencies[bpm_index]
+            snr = utils_realtime.calculateSNR(normalized_amplitude, bpm_index)
+            utils_realtime.put_snr_bpm_onframe(bpm, snr, frame)
 
-        X_chrom = col_c[R] - col_c[G]
-        Y_chrom = col_c[R] + col_c[G] - 2 * col_c[B]
-        Xf = utils_realtime.bandpass_filter(X_chrom)
-        Yf = utils_realtime.bandpass_filter(Y_chrom)
-        Nx = np.std(Xf)
-        Ny = np.std(Yf)
-        alpha_CHROM = Nx / Ny
+        else:
+            col_c = np.zeros((3, window))
 
-        x_stride = Xf - alpha_CHROM * Yf
-        amplitude = np.abs(np.fft.fft(x_stride, window)[:int(window / 2 + 1)])
-        normalized_amplitude = amplitude / amplitude.max()  # Normalized Amplitude
+            for col in [B, G, R]:
+                col_stride = mean_colors_resampled[col, -window:]  # select last samples
+                y_ACDC = signal.detrend(col_stride / np.mean(col_stride))
+                col_c[col] = y_ACDC * skin_vec[col]
 
-        frequencies = np.linspace(0, fs / 2, int(window / 2) + 1) * 60
-        bpm_index = np.argmax(normalized_amplitude)
-        bpm = frequencies[bpm_index]
-        snr = utils_realtime.calculateSNR(normalized_amplitude, bpm_index)
-        utils_realtime.put_snr_bpm_onframe(bpm, snr, frame)
+            X_chrom = col_c[R] - col_c[G]
+            Y_chrom = col_c[R] + col_c[G] - 2 * col_c[B]
+            Xf = utils_realtime.bandpass_filter(X_chrom)
+            Yf = utils_realtime.bandpass_filter(Y_chrom)
+            Nx = np.std(Xf)
+            Ny = np.std(Yf)
+            alpha_CHROM = Nx / Ny
+
+            x_stride = Xf - alpha_CHROM * Yf
+            amplitude = np.abs(np.fft.fft(x_stride, window)[:int(window / 2 + 1)])
+            normalized_amplitude = amplitude / amplitude.max()  # Normalized Amplitude
+
+            frequencies = np.linspace(0, fs / 2, int(window / 2) + 1) * 60
+            bpm_index = np.argmax(normalized_amplitude)
+            bpm = frequencies[bpm_index]
+            snr = utils_realtime.calculateSNR(normalized_amplitude, bpm_index)
+            utils_realtime.put_snr_bpm_onframe(bpm, snr, frame)
 
     cv2.imshow('Camera', frame)
 
