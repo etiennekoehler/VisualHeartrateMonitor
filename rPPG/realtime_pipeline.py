@@ -96,12 +96,9 @@ while True:
 
     # Perform chrominance method
     if mean_colors_resampled.shape[1] > window:
-
         if use_POS:
-
-            bpm = frequencies[bpm_index]
-            snr = utils_realtime.calculateSNR(normalized_amplitude, bpm_index)
-            utils_realtime.put_snr_bpm_onframe(bpm, snr, frame)
+            bpm = cpu_POS()
+            utils_realtime.put_snr_bpm_onframe(bpm, None, frame)
 
         else:
             col_c = np.zeros((3, window))
