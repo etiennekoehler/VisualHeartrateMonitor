@@ -1,4 +1,5 @@
 from pipeline import Pipeline
+from realtime_pipeline import Realtime_Pipeline
 import matplotlib.pyplot as plt
 
 def run_pipeline():
