@@ -26,11 +26,10 @@ class Realtime_Pipeline():
         # -- ROI selection
         return sig_processing.extract_holistic_frame(frame)
 
-    def run_realtime_pipeline(self):
+    def run_realtime_pipeline(self, is_test, advanced_skin_extraction):
 
         # %% User Settings
         use_prerecorded = True
-        advanced_skin_extraction = True  # advanced holistic skin extraction - not usable in real time
         fs = 30  # Sampling Frequency
         use_POS = False
 
@@ -50,8 +49,11 @@ class Realtime_Pipeline():
         face_box = []
         mean_colors = []
         timestamps = []
-
         mean_colors_resampled = np.zeros((3, 1))
+
+        # Testing
+        skin_extraction_exection_times = []
+
 
         # %% Main loop
         while True:
@@ -89,9 +91,13 @@ class Realtime_Pipeline():
                         mean_colors += [(self.get_mean_RGB_holistic(frame))[0]]
                         et = time.time()
                         elapsed_time = et - st
-                        print('Execution time:', elapsed_time, 'seconds')
+                        skin_extraction_exection_times.append(elapsed_time)
                     else:
+                        st = time.time()
                         mean_colors += [face.mean(axis=0).mean(axis=0)] # 3-item-list with mean RGB values of current frame is added to mean_colors
+                        et = time.time()
+                        elapsed_time = et - st
+                        skin_extraction_exection_times.append(elapsed_time)
                     timestamps += [time.time()] # time that frame was recorded in seconds
                     utils_realtime.draw_face_roi(face_box, frame)
                     t = np.arange(timestamps[0], timestamps[-1], 1 / fs) # get evenly spaced list of times, with length: num of frames
@@ -138,13 +144,19 @@ class Realtime_Pipeline():
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
-        cap.release()
-        cv2.destroyAllWindows()
+            if is_test  and len(skin_extraction_exection_times) > 60:
+                break
 
-        return
+        #cap.release()
+        #cv2.destroyAllWindows()
+
+        if is_test:
+            return skin_extraction_exection_times
+        else:
+            return
 
         # plt.figure()
 
 if __name__ == '__main__':
     pipe = Realtime_Pipeline()
-    pipe.run_realtime_pipeline()
+    pipe.run_realtime_pipeline(is_test=True)
