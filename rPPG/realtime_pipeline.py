@@ -23,6 +23,8 @@ class Realtime_Pipeline():
 
         sig_processing.set_total_frames(1)  # 0 means all frames are being processed
 
+        # 0.3 s until this point
+        # 0.15 s for the rest
         # -- ROI selection
         return sig_processing.extract_holistic_frame(frame)
 
@@ -151,7 +153,7 @@ class Realtime_Pipeline():
         #cv2.destroyAllWindows()
 
         if is_test:
-            return skin_extraction_exection_times
+            return mean_colors
         else:
             return
 
@@ -159,4 +161,4 @@ class Realtime_Pipeline():
 
 if __name__ == '__main__':
     pipe = Realtime_Pipeline()
-    pipe.run_realtime_pipeline(is_test=True)
+    pipe.run_realtime_pipeline(is_test=True, advanced_skin_extraction=True)
