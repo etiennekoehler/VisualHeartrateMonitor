@@ -28,7 +28,7 @@ class Realtime_Pipeline():
         # -- ROI selection
         return sig_processing.extract_holistic_frame(frame)
 
-    def run_realtime_pipeline(self, is_test, advanced_skin_extraction):
+    def run_realtime_pipeline(self, is_test, output, advanced_skin_extraction):
 
         # %% User Settings
         use_prerecorded = True
@@ -36,7 +36,8 @@ class Realtime_Pipeline():
         use_POS = False
 
         # %% Parameters
-
+        # is_test: only executes 60 frames
+        # output: 'mean_colors', 'skin_extraction_execution_times'
         haar_cascade_path = "/Users/etienne/opt/miniconda3/envs/pyvhr/lib/python3.9/site-packages/cv2/data/haarcascade_frontalface_default.xml"
         face_cascade = cv2.CascadeClassifier(haar_cascade_path)
         tracker = cv2.legacy.TrackerMOSSE_create()
@@ -146,14 +147,16 @@ class Realtime_Pipeline():
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
-            if is_test  and len(skin_extraction_exection_times) > 60:
+            if is_test and len(skin_extraction_exection_times) > 60:
                 break
 
         #cap.release()
         #cv2.destroyAllWindows()
 
-        if is_test:
+        if output == 'mean_colors':
             return mean_colors
+        elif output == 'skin_extraction_execution_times':
+            return skin_extraction_exection_times
         else:
             return
 
