@@ -37,7 +37,7 @@ class Realtime_Pipeline():
 
         # %% Parameters
         # is_test: only executes 60 frames
-        # output: 'mean_colors', 'skin_extraction_execution_times'
+        # output: 'mean_colors', 'skin_extraction_execution_times', 'bpm'
         haar_cascade_path = "/Users/etienne/opt/miniconda3/envs/pyvhr/lib/python3.9/site-packages/cv2/data/haarcascade_frontalface_default.xml"
         face_cascade = cv2.CascadeClassifier(haar_cascade_path)
         tracker = cv2.legacy.TrackerMOSSE_create()
@@ -52,7 +52,9 @@ class Realtime_Pipeline():
         face_box = []
         mean_colors = []
         timestamps = []
+        bpm_list = []
         mean_colors_resampled = np.zeros((3, 1))
+        frames_not_found = 0
 
         # Testing
         skin_extraction_exection_times = []
@@ -61,20 +63,22 @@ class Realtime_Pipeline():
         # %% Main loop
         while True:
 
-            ret, frame = cap.read()
+            success, frame = cap.read()
+            if not success:
+                break
             frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
             # Try to update face location using tracker
             if found_face and initialized_tracker:
-                print("Tracking")
+                #print("Tracking")
                 found_face, face_box = tracker.update(frame)
-                if not found_face:
-                    print("Lost Face")
+                #if not found_face:
+                    #print("Lost Face")
 
             # Try to detect new face
             if not found_face:
                 initialized_tracker = False
-                print("Redetecing")
+                #print("Redetecing")
                 faces = face_cascade.detectMultiScale(frame_gray, 1.3, 5)
                 found_face = len(faces) > 0
 
@@ -112,7 +116,10 @@ class Realtime_Pipeline():
 
             # Perform chrominance method
             if mean_colors_resampled.shape[1] > window:
+                print('mean_colors_resampled_shape', mean_colors_resampled.shape[1])
+                print('mean_colors_shape', len(mean_colors))
                 if use_POS:
+                    frames_not_found += 1
                     bpm = self.cpu_POS()
                     utils_realtime.put_snr_bpm_onframe(bpm, None, frame)
 
@@ -139,6 +146,8 @@ class Realtime_Pipeline():
                     frequencies = np.linspace(0, fs / 2, int(window / 2) + 1) * 60
                     bpm_index = np.argmax(normalized_amplitude)
                     bpm = frequencies[bpm_index]
+                    print('bpm', bpm)
+                    bpm_list.append(bpm)
                     snr = utils_realtime.calculateSNR(normalized_amplitude, bpm_index)
                     utils_realtime.put_snr_bpm_onframe(bpm, snr, frame)
 
@@ -150,6 +159,7 @@ class Realtime_Pipeline():
             if is_test and len(skin_extraction_exection_times) > 60:
                 break
 
+        cap.reset()
         #cap.release()
         #cv2.destroyAllWindows()
 
@@ -157,6 +167,10 @@ class Realtime_Pipeline():
             return mean_colors
         elif output == 'skin_extraction_execution_times':
             return skin_extraction_exection_times
+        elif output == 'bpm':
+            print('bpm_list', len(skin_extraction_exection_times))
+            print('lost frames', frames_not_found)
+            return bpm_list
         else:
             return
 
@@ -164,4 +178,4 @@ class Realtime_Pipeline():
 
 if __name__ == '__main__':
     pipe = Realtime_Pipeline()
-    pipe.run_realtime_pipeline(is_test=True, advanced_skin_extraction=True)
+    pipe.run_realtime_pipeline(is_test=False, output='', advanced_skin_extraction=False)

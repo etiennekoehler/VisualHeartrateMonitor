@@ -1,25 +1,30 @@
 import cv2, os
+import numpy
 from scipy import signal
 from numpy.linalg import norm
 import numpy as np
 
 
 class RecordingReader():
-    def __init__(self, path="recording_rest"):
-        self.index = 0
-        f = open(f"{path}/timestamps.txt")
-        self.timestamps = [float(t) for t in f.read().split(",")]
-        f.close()
-        self.path = path
+    vidcap = cv2.VideoCapture('UBFC2_subject8/vid.avi')
+    def __init__(self, path="UBFC2_subject8/vid.avi"):
+            self.index = 0
+            #f = open(f"{path}/timestamps.txt")
+            #self.timestamps = [float(t) for t in f.read().split(",")]
+            #f.close()
+            self.path = path
 
     def read(self):
-        frame = cv2.imread(f"{self.path}/{self.index}.png")
-        timestamp = self.timestamps[self.index]
+        #frame = cv2.imread(f"{self.path}/{self.index}.png")
+        success, image = self.vidcap.read()
+        #timestamp = self.timestamps[self.index]
         self.index += 1
-        if self.index == len(self.timestamps):
+        if not success:
             self.index = 0
+        return success, image
 
-        return timestamp, frame
+    def reset(self):
+        self.vidcap.set(cv2.CAP_PROP_POS_FRAMES, 0)
 
 
 def draw_face_roi(face, img):
