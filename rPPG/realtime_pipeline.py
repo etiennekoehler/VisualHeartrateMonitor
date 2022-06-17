@@ -55,6 +55,7 @@ class Realtime_Pipeline():
         bpm_list = []
         mean_colors_resampled = np.zeros((3, 1))
         frames_not_found = 0
+        frame_num = 1
 
         # Testing
         skin_extraction_exection_times = []
@@ -107,17 +108,16 @@ class Realtime_Pipeline():
                         skin_extraction_exection_times.append(elapsed_time)
                     timestamps += [time.time()] # time that frame was recorded in seconds
                     utils_realtime.draw_face_roi(face_box, frame)
-                    t = np.arange(timestamps[0], timestamps[-1], 1 / fs) # get evenly spaced list of times, with length: num of frames
-                    mean_colors_resampled = np.zeros((3, t.shape[0]))
+                    mean_colors_new = np.zeros((3, frame_num))
+                    frame_num += 1
 
-                    for color in [B, G, R]:
-                        resampled = np.interp(t, timestamps, np.array(mean_colors)[:, color]) # get list of mean colors that are evenly spaced temporally (with interpolation)
-                        mean_colors_resampled[color] = resampled
+                    for x in range(0,3):
+                        mean_colors_new[x] = [item[x] for item in mean_colors]
 
             # Perform chrominance method
-            if mean_colors_resampled.shape[1] > window:
-                print('mean_colors_resampled_shape', mean_colors_resampled.shape[1])
-                print('mean_colors_shape', len(mean_colors))
+            if mean_colors_new.shape[1] > window:
+                print('mean_colors_resampled_shape', mean_colors_resampled[:, -1])
+                print('mean_colors_new_shape', mean_colors_new[:, -1])
                 if use_POS:
                     frames_not_found += 1
                     bpm = self.cpu_POS()
@@ -127,7 +127,7 @@ class Realtime_Pipeline():
                     col_c = np.zeros((3, window))
 
                     for col in [B, G, R]:
-                        col_stride = mean_colors_resampled[col, -window:]  # select last samples
+                        col_stride = mean_colors_new[col, -window:]  # select last samples
                         y_ACDC = signal.detrend(col_stride / np.mean(col_stride))
                         col_c[col] = y_ACDC * skin_vec[col]
 
