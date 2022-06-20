@@ -33,7 +33,7 @@ class Realtime_Pipeline():
         # %% User Settings
         use_prerecorded = True
         fs = 30  # Sampling Frequency
-        use_POS = False
+        use_POS = True
 
         # %% Parameters
         # is_test: only executes 60 frames
@@ -55,7 +55,8 @@ class Realtime_Pipeline():
         bpm_list = []
         mean_colors_resampled = np.zeros((3, 1))
         frames_not_found = 0
-        frame_num = 1
+        frame_num = 0
+        pulse_signal = np.zeros(window+1)
 
         # Testing
         skin_extraction_exection_times = []
@@ -108,7 +109,7 @@ class Realtime_Pipeline():
                         skin_extraction_exection_times.append(elapsed_time)
                     timestamps += [time.time()] # time that frame was recorded in seconds
                     utils_realtime.draw_face_roi(face_box, frame)
-                    mean_colors_new = np.zeros((3, frame_num))
+                    mean_colors_new = np.zeros((3, frame_num+1))
                     frame_num += 1
 
                     for x in range(0,3):
@@ -120,8 +121,25 @@ class Realtime_Pipeline():
                 print('mean_colors_new_shape', mean_colors_new[:, -1])
                 if use_POS:
                     frames_not_found += 1
-                    bpm = self.cpu_POS()
-                    utils_realtime.put_snr_bpm_onframe(bpm, None, frame)
+                    mean_col_stride = mean_colors_new[:, -window:]
+                    mean_color = np.mean(mean_col_stride, axis=1)
+                    diag_mean_color = np.diag(mean_color)
+                    diag_mean_color_inv = np.linalg.inv(diag_mean_color)
+                    Cn = np.matmul(diag_mean_color_inv, mean_col_stride)
+                    projection_matrix = np.array([[0, 1, -1], [-2, 1, 1]])
+                    S = np.matmul(projection_matrix, Cn)
+                    std = np.array([1, np.std(S[0, :]) / np.std(S[1, :])])
+                    P = np.matmul(std, S)
+                    print('frame_num', frame_num)
+                    print('window', window)
+                    print('mean_colors_new_shape', mean_colors_new.shape)
+                    print('mean_colors_new[]_shape', mean_colors_new[:, -window:].shape)
+                    #np.pad(H, (0, 1), mode='constant', constant_values=0)
+                    pulse_signal = np.append(pulse_signal, [0])
+                    print('H_shape', pulse_signal.shape)
+                    print('H[]_shape', pulse_signal[frame_num - window:frame_num].shape)
+                    print('P_Shape', (P - np.mean(P)).shape)
+                    pulse_signal[frame_num - window:frame_num] = pulse_signal[frame_num - window:frame_num] + (P - np.mean(P))
 
                 else:
                     col_c = np.zeros((3, window))
@@ -171,6 +189,8 @@ class Realtime_Pipeline():
             print('bpm_list', len(skin_extraction_exection_times))
             print('lost frames', frames_not_found)
             return bpm_list
+        elif output == 'pulse_signal':
+            return pulse_signal
         else:
             return
 
